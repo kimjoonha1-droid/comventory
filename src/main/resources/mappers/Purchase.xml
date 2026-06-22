@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="purchase">
+	<select id="totalPor" resultType="int">
+	    SELECT COUNT(*)
+	    FROM purchase_order
+	</select>
+	
+	<select id="pOrderList"
+        parameterType="com.oracle.comventory.dto.purchase.PurchaseOrderDto"
+        resultType="com.oracle.comventory.dto.purchase.PurchaseOrderDto">
+
+    SELECT *
+    FROM (
+        SELECT ROWNUM rn, a.*
+        FROM (
+            SELECT po.purchase_id   AS purchaseId,
+                   po.cust_code     AS custCode,
+                   po.status        AS status,
+                   st.code_contents AS statusName,
+                   po.request_date  AS requestDate,
+                   po.total_price   AS totalPrice,
+                   po.inbound_date  AS inboundDate,
+                   po.reg_emp_no    AS regEmpNo,
+                   po.reg_date      AS regDate,
+                   po.cancel_reason AS cancelReason
+            FROM purchase_order po
+            LEFT JOIN status_type st
+              ON st.bcode = 520
+             AND st.mcode = po.status
+            ORDER BY po.purchase_id DESC
+        ) a
+    )
+    WHERE rn BETWEEN #{start} AND #{end}
+
+</select>
+	
+	<select id="purchaseDetail"
+        parameterType="int"
+        resultType="com.oracle.comventory.dto.purchase.PurchaseOrderDto">
+
+	    SELECT po.purchase_id   AS purchaseId,
+	           po.cust_code     AS custCode,
+	           po.status         AS status,
+	           st.code_contents AS statusName,
+	           po.request_date  AS requestDate,
+	           po.total_price   AS totalPrice,
+	           po.inbound_date  AS inboundDate,
+	           po.reg_emp_no    AS regEmpNo,
+	           po.reg_date      AS regDate,
+	           po.cancel_reason AS cancelReason
+	
+	    FROM purchase_order po
+	    LEFT JOIN status_type st
+	      ON st.bcode = 520
+	     AND st.mcode = po.status
+	
+	    WHERE po.purchase_id = #{purchaseId}
+	
+	</select>
+	
+	<select id="purchaseItemList"
+	        parameterType="int"
+	        resultType="com.oracle.comventory.dto.purchase.PurchaseDetailDto">
+	    SELECT pd.purchase_id AS purchaseId,
+	           pd.product_code AS productCode,
+	           p.product_name AS productName,
+	           pd.purchase_amount AS purchaseAmount,
+	           pd.purchase_product_price AS purchaseProductPrice,
+	           pd.reg_emp_no AS regEmpNo,
+	           pd.reg_date AS regDate
+	    FROM purchase_detail pd
+	    JOIN product p
+	      ON pd.product_code = p.product_code
+	    WHERE pd.purchase_id = #{purchaseId}
+	</select>
+	
+	<!-- 구매 가능한 부품 목록 -->
+<select id="purchasePartList"
+        resultType="com.oracle.comventory.dto.product.ProductDto">
+    SELECT product_code AS productCode,
+           product_name AS productName,
+           product_price AS productPrice
+    FROM product
+    WHERE product_status = 0
+    ORDER BY product_code
+</select>
+
+<select id="purchaseCustList"
+        resultType="com.oracle.comventory.dto.custTable.CustTableDto">
+    SELECT cust_code AS custCode,
+           cust_name AS custName
+    FROM cust_table
+    WHERE cust_type = 1
+    ORDER BY cust_code
+</select>
+
+<!-- 구매/발주 헤더 등록 -->
+<insert id="insertPurchase"
+        parameterType="com.oracle.comventory.dto.purchase.PurchaseOrderDto">
+    INSERT INTO purchase_order (
+        purchase_id,
+        cust_code,
+        status,
+        request_date,
+        total_price,
+        inbound_date,
+        reg_emp_no,
+        reg_date
+    )
+    VALUES (
+        seq_purchase_id.NEXTVAL,
+        #{custCode},
+        1,
+        SYSDATE,
+        #{totalPrice},
+        #{inboundDate},
+        #{regEmpNo},
+        SYSDATE
+    )
+</insert>
+
+
+<!-- 구매/발주 상세 등록 -->
+<insert id="insertPurchaseDetail"
+        parameterType="com.oracle.comventory.dto.purchase.PurchaseDetailDto">
+    INSERT INTO purchase_detail (
+        purchase_id,
+        product_code,
+        purchase_amount,
+        purchase_product_price,
+        reg_emp_no,
+        reg_date
+    )
+    VALUES (
+        seq_purchase_id.CURRVAL,
+        #{productCode},
+        #{purchaseAmount},
+        #{purchaseProductPrice},
+        #{regEmpNo},
+        SYSDATE
+    )
+</insert>
+
+<!-- 삭제 -->
+<delete id="deletePurchaseDetail" parameterType="int">
+    DELETE FROM purchase_detail
+    WHERE purchase_id = #{value}
+</delete>
+
+<delete id="deletePurchase" parameterType="int">
+    DELETE FROM purchase_order
+    WHERE purchase_id = #{value}
+</delete>
+
+<update id="updatePurchase"
+        parameterType="com.oracle.comventory.dto.purchase.PurchaseOrderDto">
+
+    UPDATE purchase_order
+       SET cust_code      = #{custCode},
+           inbound_date   = #{inboundDate},
+           total_price    = #{totalPrice},
+           status         = #{status},
+           cancel_reason  = #{cancelReason, jdbcType=VARCHAR}
+     WHERE purchase_id = #{purchaseId}
+
+</update>
+
+<update id="updatePurchaseDetail"
+        parameterType="com.oracle.comventory.dto.purchase.PurchaseDetailDto">
+
+    UPDATE purchase_detail
+       SET product_code = #{productCode},
+           purchase_amount = #{purchaseAmount},
+           purchase_product_price = #{purchaseProductPrice}
+     WHERE purchase_id = #{purchaseId}
+</update>
+</mapper>

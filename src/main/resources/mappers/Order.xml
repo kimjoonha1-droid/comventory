@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.oracle.comventory.mapper.order.OrderMapper">
+
+
+
+	<select id="selectOrderList" parameterType="com.oracle.comventory.dto.orders.OrderDto" resultType="com.oracle.comventory.dto.orders.OrderDto">
+	    SELECT o.*, c.cust_name, e1.emp_name as drafter_name, e2.emp_name as appr_name, s.code_contents as status_name
+	    FROM orders o
+	    JOIN CUST_TABLE c ON o.cust_code = c.cust_code
+	    JOIN emp e1 ON o.drafter_empno = e1.emp_no
+	    LEFT JOIN emp e2 ON o.appr_empno = e2.emp_no
+	    LEFT JOIN status_type s ON s.bcode = 600 AND o.eapp_status = s.mcode
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND o.order_drafting_date &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND o.order_drafting_date &lt;= TO_DATE(#{endDate}, 'YYYY-MM-DD')
+            </if>
+            <if test="custCodeParam != null">
+                AND o.cust_code = #{custCodeParam}
+            </if>
+            <if test="statusList != null">
+                AND o.eapp_status IN
+                <foreach item="status" collection="statusList" open="(" separator="," close=")">
+                    #{status}
+                </foreach>
+            </if>
+            
+
+	        <if test="searchKeyword != null and searchKeyword != ''">
+	            AND (
+	                UPPER(c.cust_name) LIKE '%' || UPPER(#{searchKeyword}) || '%'
+	                OR UPPER(e1.emp_name) LIKE '%' || UPPER(#{searchKeyword}) || '%'
+	                OR UPPER(e2.emp_name) LIKE '%' || UPPER(#{searchKeyword}) || '%'
+	                OR EXISTS (
+	                    SELECT 1 
+	                    FROM orders_detail od
+	                    JOIN PRODUCT p ON od.product_code = p.product_code
+	                    WHERE od.order_code = o.order_code
+	                    AND UPPER(p.product_name) LIKE '%' || UPPER(#{searchKeyword}) || '%'
+	                )
+	            )
+	        </if>
+            
+        </where>
+        ORDER BY o.order_drafting_date DESC, o.order_code DESC
+        
+    </select>
+
+
+    <select id="selectOrderByCode" parameterType="long" resultType="com.oracle.comventory.dto.orders.OrderDto">
+        SELECT o.*, c.cust_name, e1.emp_name as drafter_name, e2.emp_name as appr_name
+        FROM orders o
+        LEFT JOIN CUST_TABLE c ON o.cust_code = c.cust_code
+        LEFT JOIN emp e1 ON o.drafter_empno = e1.emp_no
+        LEFT JOIN emp e2 ON o.appr_empno = e2.emp_no
+        WHERE o.order_code = #{orderCode}
+    </select>
+
+
+
+	<select id="selectOrderDetailList" parameterType="long" resultType="com.oracle.comventory.dto.ordersDetail.OrderDetailDto">
+	    SELECT od.*, p.product_name
+	    FROM orders_detail od
+	    JOIN PRODUCT p ON od.product_code = p.product_code
+	    WHERE od.order_code = #{orderCode}
+	</select>
+	
+
+
+	<select id="selectAvailableStock" parameterType="long" resultType="long">
+	    SELECT QTY
+	    FROM (
+	        SELECT cm.QTY
+	        FROM CLOSING_MONTH cm
+	        WHERE cm.PRODUCT_CODE = #{productCode}
+	          AND cm.CLOSING_TYPE = 1
+	          AND cm.QTY IS NOT NULL
+	        ORDER BY cm.REG_DATE DESC, cm.CLOSING_YM DESC
+	    )
+	    WHERE ROWNUM = 1
+	</select>
+
+
+	<select id="selectClosingStatus" parameterType="string" resultType="java.lang.Integer">
+	    SELECT CLOSING_STATUS
+	    FROM CLOSING_DAY
+	    WHERE CLOSING_YMD = #{ymd}
+	</select>
+
+
+
+	<select id="selectCustomers" resultType="map">
+	    SELECT cust_code, cust_name
+	    FROM CUST_TABLE
+	    WHERE CUST_DEL_STATUS = 1
+	      AND cust_type = 2
+	    ORDER BY cust_name ASC
+	</select>
+
+
+	<select id="selectProducts" resultType="map">
+	    SELECT product_code, product_name, product_price
+	    FROM PRODUCT
+	    WHERE PRODUCT_DEL_STATUS = 1
+	    ORDER BY product_name ASC
+	</select>
+
+
+
+
+    <select id="selectDeptMgrByEmpNo" parameterType="int" resultType="int">
+        SELECT d.dept_mgr
+        FROM emp e
+        JOIN dept d ON e.dept_code = d.dept_code
+        WHERE e.emp_no = #{drafterEmpNo}
+    </select>
+
+
+
+	<select id="selectLogisticsApprover" parameterType="map" resultType="int">
+	    SELECT emp_no
+	    FROM (
+	        SELECT e.emp_no,
+	               CASE e.emp_grade
+	                   WHEN 5 THEN 1
+	                   WHEN 6 THEN 2
+	                   WHEN 4 THEN 3
+	                   WHEN 3 THEN 4
+	               END AS priority
+	        FROM emp e
+	        WHERE e.dept_code = #{deptCode}
+	          AND e.emp_grade IN
+	          <foreach item="g" collection="grades" open="(" separator="," close=")">
+	              #{g}
+	          </foreach>
+	        ORDER BY priority ASC
+	    )
+	    WHERE ROWNUM = 1
+	</select>
+	
+	
+
+	<select id="selectLogisticsApprovers" parameterType="map" resultType="int">
+	    SELECT e.emp_no
+	    FROM emp e
+	    WHERE e.dept_code = #{deptCode}
+	      AND e.emp_grade IN
+	      <foreach item="g" collection="grades" open="(" separator="," close=")">
+	          #{g}
+	      </foreach>
+	    ORDER BY 
+	        CASE e.emp_grade
+	            WHEN 5 THEN 1
+	            WHEN 6 THEN 2
+	            WHEN 4 THEN 3
+	            WHEN 3 THEN 4
+	        END ASC
+	</select>
+
+
+	<insert id="insertOrder" parameterType="com.oracle.comventory.dto.orders.OrderDto">
+	    <selectKey keyProperty="order_code" resultType="long" order="BEFORE">
+	        SELECT order_seq.NEXTVAL FROM DUAL
+	    </selectKey>
+	    INSERT INTO orders (
+	        order_code, cust_code, order_drafting_date, 
+	        order_confirmed_date, approval_timestamp, order_sum_price, 
+	        drafter_empno, appr_empno, eapp_status, reg_emp_no, purchase_reg_date
+	    ) VALUES (
+	        #{order_code}, #{cust_code}, SYSDATE,
+	        #{order_confirmed_date, jdbcType=TIMESTAMP}, 
+	        #{approval_timestamp, jdbcType=TIMESTAMP}, 
+	        #{order_sum_price}, 
+	        #{drafter_empno}, #{appr_empno}, #{eapp_status}, #{reg_emp_no}, SYSDATE
+	    )
+	</insert>
+
+
+    <insert id="insertOrderDetail" parameterType="com.oracle.comventory.dto.ordersDetail.OrderDetailDto">
+        INSERT INTO orders_detail (
+            order_code, product_code, orders_drafter_empno,
+            order_amount, order_unit_price, order_amt_price, reg_emp_no, purchase_reg_date
+        ) VALUES (
+            #{order_code}, #{product_code}, #{orders_drafter_empno},
+            #{order_amount}, #{order_unit_price}, #{order_amt_price}, #{reg_emp_no}, SYSDATE
+        )
+    </insert>
+
+
+	<update id="updateOrderStatus" parameterType="com.oracle.comventory.dto.orders.OrderDto">
+	    UPDATE orders
+	    <set>
+	        <if test="eapp_status != null"> eapp_status = #{eapp_status}, </if>
+	        <if test="appr_empno != null"> appr_empno = #{appr_empno}, </if>
+	        <if test="order_confirmed_date != null"> order_confirmed_date = #{order_confirmed_date}, </if>
+	        <if test="approval_timestamp != null"> approval_timestamp = #{approval_timestamp}, </if>
+	        <if test="order_rejected_date != null"> order_rejected_date = #{order_rejected_date}, </if>
+	        <if test="order_cancelled_date != null"> order_cancelled_date = #{order_cancelled_date}, </if>
+	        <if test="order_refuse != null"> order_refuse = #{order_refuse} </if>
+	    </set>
+	    WHERE order_code = #{order_code}
+	</update>
+
+
+
+	<update id="promoteApprovedToShipWait">
+	    UPDATE orders
+	       SET eapp_status = #{shipWait}
+	     WHERE eapp_status IN (#{manual}, #{auto})
+	       AND order_confirmed_date &lt;= SYSDATE
+	</update>
+
+
+	<select id="existsBatchLog" resultType="int">
+	    SELECT COUNT(*)
+	    FROM batch_execution_log
+	    WHERE batch_name = #{batchName}
+	      AND exec_date  = #{execDate}
+	</select>
+	
+	
+	<insert id="insertBatchLog">
+	    INSERT INTO batch_execution_log (batch_name, exec_date, exec_time, affected_rows, scheduled_time)
+	    VALUES (#{batchName}, #{execDate}, SYSTIMESTAMP, #{affectedRows}, #{scheduledTime, jdbcType=TIMESTAMP})
+	</insert>
+
+
+
+</mapper>

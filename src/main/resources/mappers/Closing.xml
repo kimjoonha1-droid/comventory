@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="closing">
+    <select id="isTrueClosed" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM closing_day
+        WHERE closing_ymd = #{value}
+          AND closing_status = 2
+    </select>
+    
+    <select id="isTempClosed"
+	        parameterType="string"
+	        resultType="boolean">
+	    SELECT COUNT(*)
+	    FROM closing_day
+	    WHERE closing_ymd = #{value}
+	      AND closing_status = 1
+	</select>
+	
+	<select id="isBeforeTrueClosed"
+	        parameterType="string"
+	        resultType="boolean">
+	    SELECT CASE
+	             WHEN COUNT(*) > 0 THEN 1
+	             ELSE 0
+	           END
+	    FROM closing_day
+	    WHERE closing_status = 2
+	      AND closing_ymd >= #{value}
+	</select>
+</mapper>

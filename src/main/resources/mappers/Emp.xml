@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.oracle.comventory.dao.emp.EmpMapper">
+
+
+    <!-- 전체 조회 -->
+    <select id="findAll" resultType="EmpDto">
+  		  SELECT * FROM emp WHERE emp_del_status = 0
+    </select>
+    
+	<select id="getTotalEmp" parameterType="EmpDto" resultType="int">
+	    SELECT COUNT(*)
+	    FROM emp e
+	    LEFT JOIN dept d ON e.dept_code = d.dept_code
+	    WHERE e.emp_del_status = 0
+	    <choose>
+		    <when test="empType == 'sales'">
+		        AND e.emp_no BETWEEN 800000 AND 899999
+		    </when>
+		    <when test="empType == 'purchase'">
+		        AND e.emp_no BETWEEN 900000 AND 999999
+		    </when>
+		    <otherwise>
+		        AND e.emp_no BETWEEN 0 AND 9999
+		    </otherwise>
+		</choose>
+	    <if test="searchKeyword != null and searchKeyword != ''">
+	        AND (
+	            TO_CHAR(e.emp_no) LIKE '%' || #{searchKeyword} || '%'
+	            OR e.emp_name LIKE '%' || #{searchKeyword} || '%'
+	            OR d.dept_name LIKE '%' || #{searchKeyword} || '%'
+	            OR CASE e.emp_grade
+	                WHEN 1 THEN '대표'
+	                WHEN 2 THEN '이사'
+	                WHEN 3 THEN '부장'
+	                WHEN 4 THEN '차장'
+	                WHEN 5 THEN '과장'
+	                WHEN 6 THEN '대리'
+	                WHEN 7 THEN '주임'
+	                WHEN 8 THEN '사원/비서'
+	                ELSE TO_CHAR(e.emp_grade)
+	              END LIKE '%' || #{searchKeyword} || '%'
+	        )
+	    </if>
+	</select>
+	
+	<select id="findPageList" parameterType="EmpDto" resultType="EmpDto">
+	    SELECT *
+	    FROM (
+	        SELECT rownum rn, a.*
+	        FROM (
+	            SELECT e.*,
+	                   d.dept_name
+	            FROM emp e
+	            LEFT JOIN dept d ON e.dept_code = d.dept_code
+	            WHERE e.emp_del_status = 0
+	            <choose>
+				    <when test="empType == 'sales'">
+				        AND e.emp_no BETWEEN 800000 AND 899999
+				    </when>
+				    <when test="empType == 'purchase'">
+				        AND e.emp_no BETWEEN 900000 AND 999999
+				    </when>
+				    <otherwise>
+				        AND e.emp_no BETWEEN 0 AND 9999
+				    </otherwise>
+				</choose>
+	            <if test="searchKeyword != null and searchKeyword != ''">
+	                AND (
+	                    TO_CHAR(e.emp_no) LIKE '%' || #{searchKeyword} || '%'
+	                    OR e.emp_name LIKE '%' || #{searchKeyword} || '%'
+	                    OR d.dept_name LIKE '%' || #{searchKeyword} || '%'
+	                    OR CASE e.emp_grade
+	                        WHEN 1 THEN '대표'
+	                        WHEN 2 THEN '이사'
+	                        WHEN 3 THEN '부장'
+	                        WHEN 4 THEN '차장'
+	                        WHEN 5 THEN '과장'
+	                        WHEN 6 THEN '대리'
+	                        WHEN 7 THEN '주임'
+	                        WHEN 8 THEN '사원/비서'
+	                        ELSE TO_CHAR(e.emp_grade)
+	                      END LIKE '%' || #{searchKeyword} || '%'
+	                )
+	            </if>
+	            ORDER BY e.emp_no DESC
+	        ) a
+	        WHERE rownum &lt;= #{end}
+	    )
+	    WHERE rn &gt;= #{start}
+	</select>
+
+    
+    
+    <!-- 사번으로 조회 -->
+    <select id="findByEmpNo" parameterType="int" resultType="EmpDto">
+        SELECT *
+        FROM emp
+        WHERE emp_no = #{empNo}
+          AND emp_del_status = 0
+    </select>
+
+    <!-- ID로 조회 -->
+    <select id="findByEmpId" parameterType="string" resultType="EmpDto">
+        SELECT *
+        FROM emp
+        WHERE emp_id = #{empId}
+          AND emp_del_status = 0
+    </select>
+
+	<select id="findLoginUser" parameterType="map" resultType="EmpDto">
+	    SELECT *
+	    FROM emp
+	    WHERE emp_id = #{empId}
+	      AND emp_password = #{empPassword}
+	      AND emp_del_status = 0
+	</select>
+
+    <!-- ID 중복 체크 (conventory_share) -->
+    <select id="checkEmpIdDuplicate" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM conventory_share.emp
+        WHERE emp_id = #{empId}
+    </select>
+    
+	<!-- 다음 사번 조회 SQL -->
+	<select id="findNextEmpNoInRange" parameterType="map" resultType="int">
+	    SELECT NVL(MAX(emp_no), #{startEmpNo} - 1) + 1
+	    FROM emp
+	    WHERE emp_no BETWEEN #{startEmpNo} AND #{endEmpNo}
+	</select>
+
+    <!-- 등록 -->
+    <insert id="insert" parameterType="EmpDto">
+    INSERT INTO emp (
+        emp_no, emp_name, emp_id, emp_password, emp_tel,
+        emp_grade, emp_sal, emp_email, emp_pic,
+        user_access, dept_code, emp_join_date, emp_del_status,
+        reg_emp_no, reg_date
+    )
+    VALUES (
+        #{emp_no},
+        #{emp_name},
+        #{emp_id},
+        #{emp_password},
+        #{emp_tel},
+		#{emp_grade},
+		#{emp_sal, jdbcType=NUMERIC},
+		#{emp_email, jdbcType=VARCHAR},
+		#{emp_pic, jdbcType=VARCHAR},
+		
+		#{user_access},
+		#{dept_code},
+		SYSDATE,
+		0,
+		#{reg_emp_no},
+		SYSDATE
+    )
+    </insert>
+
+
+    <!-- 수정 -->
+    <!-- 수정 -->
+	<update id="update" parameterType="EmpDto">
+	    UPDATE emp
+		SET emp_name = #{emp_name},
+		    emp_tel = #{emp_tel},
+		    emp_grade = #{emp_grade},
+		    emp_sal = #{emp_sal, jdbcType=NUMERIC},
+		    emp_email = #{emp_email, jdbcType=VARCHAR},
+		    dept_code = #{dept_code},
+		    emp_del_status = #{emp_del_status},
+		    emp_pic = #{emp_pic, jdbcType=VARCHAR}
+	    WHERE emp_no = #{emp_no}
+	</update>
+
+
+
+    <!-- 삭제 (논리 삭제) -->
+    <update id="delete" parameterType="int">
+        UPDATE emp
+        SET emp_del_status = 1
+        WHERE emp_no = #{empNo}
+    </update>
+
+</mapper>

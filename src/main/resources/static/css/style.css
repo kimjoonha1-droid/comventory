@@ -1,0 +1,162 @@
+@charset "UTF-8";
+
+html,
+body {
+    min-height: 100%;
+    background-color: #f8f9fa;
+}
+
+/* 1. 헤더(Navbar) 고정 스타일 */
+.navbar {
+    position: fixed;    /* 화면 최상단에 고정 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 56px;       /* 헤더 표준 높이 설정 */
+    z-index: 1050;      /* 사이드바보다 위에 위치하도록 설정[cite: 8] */
+    background-color: #212529 !important; /* 다크 테마 유지 */
+    border-bottom: 1px solid #495057;
+}
+
+/* 2. 전체 레이아웃 (헤더 높이만큼 여백 추가) */
+#wrapper {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 56px;
+    align-items: stretch;
+    overflow-x: hidden;
+    min-height: calc(100vh - 56px);
+}
+
+/* 3. 사이드바 스타일 수정 */
+#sidebar-wrapper {
+    width: 250px;
+    min-height: calc(100vh - 56px);
+    background: #ffffff;
+    border-right: 1px solid #dee2e6;
+    transition: all 0.3s ease-in-out;
+    overflow-x: hidden;
+    flex-shrink: 0;
+}
+
+/* 사이드바 제목 영역 */
+.sidebar-heading {
+    padding: 1.2rem 1rem;
+    font-size: 1.1rem;
+    background: #f8f9fa;
+    color: #212529;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* 4. 사이드바 온오프 기능 (수정) */
+#sidebar-wrapper.toggled {
+    width: 0;
+    border-right: none;
+}
+
+/* 5. 사이드바 메뉴 리스트[cite: 8] */
+#sidebar-wrapper .list-group-item {
+    border: none;
+    padding: 1rem 1.5rem;
+    background: transparent;
+    color: #495057 !important; /* 평소 글자색 (짙은 회색) */
+    text-decoration: none;
+    display: block;
+    transition: 0.2s;
+}
+/* 하위 메뉴 스타일 커스텀 */
+.submenu-item {
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+}
+/* 화살표 회전 애니메이션 (선택 사항) */
+.list-group-item[aria-expanded="true"] .arrow-icon {
+    transform: rotate(180deg);
+}
+.arrow-icon {
+    transition: transform 0.2s;
+}
+
+/* 마우스 호버 시 강조 효과 */
+#sidebar-wrapper .list-group-item:hover {
+    background-color: #e9ecef;
+    color: #0d6efd !important; /* 파란색 강조[cite: 8] */
+}
+
+#sidebar-wrapper .list-group-item i {
+    margin-right: 10px;
+    color: #6c757d;
+}
+
+/* 6. 본문 영역 설정 수정 */
+#page-content-wrapper {
+    flex: 1;
+    min-width: 0;
+    min-height: calc(100vh - 56px);
+    background-color: #f8f9fa;
+    transition: all 0.3s;
+    width: 100%;
+}
+
+/* 7. 푸터 스타일[cite: 3] */
+.footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 0;
+}
+/* 재고 요약 바 스타일 */
+.stock-summary-card {
+    border-radius: 10px;
+}
+
+.stock-summary-item {
+    padding: 0.5rem 0;
+}
+
+.stock-summary-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* 검색 필터 영역 */
+.stock-filter-box {
+    background-color: #f8f9fa !important;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+/* 테이블 스타일 커스텀 */
+.stock-table thead {
+    background-color: #f1f3f5;
+}
+
+.stock-table th {
+    font-size: 0.9rem;
+    color: #495057;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 2px solid #adb5bd !important;
+}
+
+.stock-table td {
+    padding: 12px 8px;
+    font-size: 0.95rem;
+}
+
+/* 특정 열 강조 */
+.stock-code {
+    font-weight: 700;
+    color: #0d6efd;
+}
+
+.stock-qty {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #212529;
+}
+
+/* 상태 뱃지 보정 */
+.badge-pill-custom {
+    padding: 0.5em 1em;
+    font-weight: 500;
+}

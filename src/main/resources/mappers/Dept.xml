@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  
+  <mapper namespace="com.oracle.comventory.dao.dept.DeptMapper">
+  
+    <!-- 전체 조회 -->
+	<select id="findAll" parameterType="string" resultType="DeptDto">
+	    SELECT
+	        d.dept_code,
+	        d.dept_name,
+	        d.dept_tel,
+	        d.dept_address AS dept_loc,
+	        d.dept_mgr AS dept_mgr,
+	        CASE
+	            WHEN e.emp_no IS NOT NULL THEN e.emp_name || '(' || e.emp_no || ')'
+	            WHEN d.dept_mgr IS NOT NULL THEN TO_CHAR(d.dept_mgr)
+	            ELSE NULL
+	        END AS dept_mgr_display,
+	        d.dept_del_status AS dept_gubun,
+	        d.reg_date,
+	        TO_CHAR(d.reg_date, 'YYYY-MM-DD') AS str_in_date
+	    FROM dept d
+	    LEFT JOIN emp e
+	           ON e.emp_no = d.dept_mgr
+	          AND e.emp_del_status = 0
+	    WHERE d.dept_del_status = 0
+	    <if test="_parameter != null and _parameter != ''">
+	        AND (
+	            TO_CHAR(d.dept_code) LIKE '%' || #{value} || '%'
+	            OR d.dept_name LIKE '%' || #{value} || '%'
+	        )
+	    </if>
+	    ORDER BY d.dept_code
+	</select>
+	
+	<select id="getTotalDept" parameterType="DeptDto" resultType="int">
+	    SELECT COUNT(*)
+	    FROM dept
+	    WHERE dept_del_status = 0
+	    <if test="searchKeyword != null and searchKeyword != ''">
+	        AND (
+	            TO_CHAR(dept_code) LIKE '%' || #{searchKeyword} || '%'
+	            OR dept_name LIKE '%' || #{searchKeyword} || '%'
+	        )
+	    </if>
+	</select>
+	
+	<select id="findPageList" parameterType="DeptDto" resultType="DeptDto">
+	    SELECT *
+	    FROM (
+	        SELECT rownum rn, a.*
+	        FROM (
+	            SELECT
+	                d.dept_code,
+	                d.dept_name,
+	                d.dept_tel,
+	                d.dept_address AS dept_loc,
+	                d.dept_mgr AS dept_mgr,
+	                CASE
+	                    WHEN e.emp_no IS NOT NULL THEN e.emp_name || '(' || e.emp_no || ')'
+	                    WHEN d.dept_mgr IS NOT NULL THEN TO_CHAR(d.dept_mgr)
+	                    ELSE NULL
+	                END AS dept_mgr_display,
+	                d.dept_del_status AS dept_gubun,
+	                d.reg_date,
+	                TO_CHAR(d.reg_date, 'YYYY-MM-DD') AS str_in_date
+	            FROM dept d
+	            LEFT JOIN emp e
+	                   ON e.emp_no = d.dept_mgr
+	                  AND e.emp_del_status = 0
+	            WHERE d.dept_del_status = 0
+	            <if test="searchKeyword != null and searchKeyword != ''">
+	                AND (
+	                    TO_CHAR(d.dept_code) LIKE '%' || #{searchKeyword} || '%'
+	                    OR d.dept_name LIKE '%' || #{searchKeyword} || '%'
+	                )
+	            </if>
+	            ORDER BY d.dept_code
+	        ) a
+	        WHERE rownum &lt;= #{end}
+	    )
+	    WHERE rn &gt;= #{start}
+	</select>
+	
+	<select id="findById" parameterType="int" resultType="DeptDto">
+	    SELECT
+	        d.dept_code,
+	        d.dept_name,
+	        d.dept_tel,
+	        d.dept_address AS dept_loc,
+	        d.dept_mgr AS dept_mgr,
+	        CASE
+	            WHEN e.emp_no IS NOT NULL THEN e.emp_name || '(' || e.emp_no || ')'
+	            WHEN d.dept_mgr IS NOT NULL THEN TO_CHAR(d.dept_mgr)
+	            ELSE NULL
+	        END AS dept_mgr_display,
+	        d.dept_del_status AS dept_gubun,
+	        d.reg_date,
+	        TO_CHAR(d.reg_date, 'YYYY-MM-DD') AS str_in_date
+	    FROM dept d
+	    LEFT JOIN emp e
+	           ON e.emp_no = d.dept_mgr
+	          AND e.emp_del_status = 0
+	    WHERE d.dept_code = #{value}
+	      AND d.dept_del_status = 0
+	</select>
+
+	<insert id="save" parameterType="DeptDto">
+	    INSERT INTO dept (
+	        dept_code,
+	        dept_name,
+	        dept_tel,
+	        dept_address,
+	        dept_mgr,
+	        dept_del_status,
+	        reg_emp_no,
+	        reg_date
+	    )
+	    VALUES (
+	        #{dept_code},
+	        #{dept_name},
+	        #{dept_tel},
+	        #{dept_loc},
+	        #{dept_mgr},
+	        0,
+	        #{reg_emp_no},
+	        SYSDATE
+	    )
+	</insert>
+	
+	<update id="update" parameterType="DeptDto">
+	    UPDATE dept
+	    SET dept_name = #{dept_name},
+	        dept_tel = #{dept_tel},
+	        dept_address = #{dept_loc},
+	        dept_mgr = #{dept_mgr},
+	        dept_del_status = #{dept_gubun}
+	    WHERE dept_code = #{dept_code}
+	</update>
+
+	
+	<update id="delete" parameterType="int">
+	    UPDATE dept
+	    SET dept_del_status = 1
+	    WHERE dept_code = #{value}
+	</update>
+
+	<select id="findNextDeptCode" resultType="java.lang.Integer">
+	    SELECT MIN(candidate_dept_code)
+	    FROM (
+	        SELECT 10000 + (LEVEL - 1) * 500 AS candidate_dept_code
+	        FROM dual
+	        CONNECT BY 10000 + (LEVEL - 1) * 500 &lt;= 99999
+	    )
+	    WHERE candidate_dept_code NOT IN (
+	        SELECT dept_code
+	        FROM dept
+	    )
+	</select>
+	
+	<select id="findDeptManagerList" resultType="EmpDto">
+	    SELECT emp_no,
+	           emp_name,
+	           dept_code,
+	           emp_grade
+	    FROM emp
+	    WHERE emp_del_status = 0
+	      AND emp_grade = 3
+	    ORDER BY emp_name
+	</select>
+  
+  </mapper>

@@ -1,0 +1,211 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+
+<%@ taglib prefix="c"
+    uri="http://java.sun.com/jsp/jstl/core" %>
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>제품 등록</title>
+
+<%@ include file="../common/staticResources.jsp" %>
+
+<style>
+    .product-form-container {
+        width: 600px;
+        background: white;
+        padding: 35px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .product-form label {
+        display: block;
+        margin-bottom: 7px;
+        font-weight: bold;
+        color: #34495e;
+    }
+
+    .product-form input,
+    .product-form select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+
+    .help-text {
+        font-size: 12px;
+        color: #888;
+        margin-top: 5px;
+    }
+
+    .btn-area {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    .product-form button,
+    .product-form .btn-link {
+        text-decoration: none;
+        border: none;
+        padding: 10px 22px;
+        border-radius: 6px;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        display: inline-block;
+    }
+
+    .btn-save {
+        background-color: #3498db;
+    }
+
+    .btn-save:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-list {
+        background-color: #7f8c8d;
+    }
+
+    .btn-list:hover {
+        background-color: #636e72;
+    }
+</style>
+</head>
+
+<body>
+
+<%@ include file="../common/header.jsp" %>
+
+<div id="wrapper">
+
+    <%@ include file="../common/sidebar.jsp" %>
+
+    <div id="page-content-wrapper">
+        <main class="content p-4">
+
+        <div class="product-form-container mx-auto">
+
+            <h2>제품 등록</h2>
+
+            <form action="/product/save" method="post" class="product-form">
+
+                <div class="form-group">
+				    <label>제품 코드</label>
+				
+				    <input type="number"
+				           name="productCode"
+				           value="${nextProductCode}"
+				           readonly>
+				
+				    <div class="help-text">
+				        제품 코드는 자동 생성됩니다.
+				    </div>
+				</div>
+
+                <div class="form-group">
+                    <label>제품명</label>
+                    <input type="text"
+                           name="productName"
+                           required
+                           maxlength="100"
+                           placeholder="제품명을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label>카테고리</label>
+
+                    <select name="productCategory" required>
+                        <option value="">카테고리 선택</option>
+
+                        <c:forEach var="code" items="${productCategoryList}">
+                            <c:if test="${code.mcode != 999}">
+                                <option value="${code.mcode}">
+                                    ${code.code_contents}
+                                </option>
+                            </c:if>
+                        </c:forEach>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>제품 상태</label>
+
+                    <select name="productStatus" required>
+                        <option value="0">부품</option>
+                        <option value="1">완제품</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>제품 가격</label>
+                    <input type="number"
+                           name="productPrice"
+                           required
+                           min="0"
+                           max="999999999"
+                           step="1"
+                           placeholder="제품 가격을 입력하세요">
+                    <div class="help-text">0 이상 숫자만 입력</div>
+                </div>
+
+                <div class="form-group">
+                    <label>적정 수량</label>
+                    <input type="number"
+                           name="productProperQty"
+                           required
+                           min="0"
+                           max="9999999"
+                           step="1"
+                           placeholder="적정 수량을 입력하세요">
+                    <div class="help-text">0 이상 숫자만 입력</div>
+                </div>
+
+				<div class="form-group">
+					    <label>등록 사원 번호</label>
+					    <input type="text"
+					           value="${sessionScope.loginUser.emp_no}"
+					           readonly>
+					    <div class="help-text">로그인한 사원번호가 자동으로 등록됩니다.</div>
+					</div>
+
+                <div class="btn-area">
+
+                    <button type="submit" class="btn-save">
+                        등록
+                    </button>
+
+                    <a href="/product/list" class="btn-link btn-list">
+                        목록
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        </main>
+    </div>
+
+</div>
+
+<%@ include file="../common/footer.jsp" %>
+
+</body>
+</html>

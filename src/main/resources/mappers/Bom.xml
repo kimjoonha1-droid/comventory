@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.oracle.oBootMybatis01.Member1Mapper">
+<select id="totalBom" resultType="int">
+    SELECT COUNT(*)
+    FROM bom
+</select>
+
+<select id="bomList"
+        parameterType="com.oracle.comventory.dto.bom.BomDto"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+
+    SELECT *
+    FROM (
+        SELECT ROWNUM rn, a.*
+        FROM (
+            SELECT b.product_code      AS productCode,
+                   p.product_name      AS productName,
+                   COUNT(*)            AS partCount,
+                   SUM(b.need_qty)     AS totalNeedQty,
+                   MAX(b.reg_emp_no)   AS regEmpNo,
+                   MAX(b.reg_date)     AS regDate
+            FROM bom b
+            JOIN product p
+              ON b.product_code = p.product_code
+            GROUP BY b.product_code, p.product_name
+            ORDER BY b.product_code
+        ) a
+    )
+    WHERE rn BETWEEN #{start} AND #{end}
+
+</select>
+
+<select id="bomDetailList"
+        parameterType="int"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+
+    SELECT b.product_code     AS productCode,
+           finished.product_name AS productName,
+           b.product_won      AS productWon,
+           part.product_name  AS productWonName,
+           b.need_qty         AS needQty,
+           b.reg_emp_no       AS regEmpNo,
+           b.reg_date         AS regDate
+    FROM bom b
+    JOIN product finished
+      ON b.product_code = finished.product_code
+    JOIN product part
+      ON b.product_won = part.product_code
+    WHERE b.product_code = #{value}
+    ORDER BY b.product_won
+
+</select>
+
+<insert id="insertBom"
+        parameterType="com.oracle.comventory.dto.bom.BomDto">
+    INSERT INTO bom (
+        product_code,
+        product_won,
+        need_qty,
+        reg_emp_no,
+        reg_date
+    )
+    VALUES (
+        #{productCode},
+        #{productWon},
+        #{needQty},
+        #{regEmpNo},
+        SYSDATE
+    )
+</insert>
+
+<!-- 신규 등록용 -->
+<select id="bomFinishedProductList"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+    SELECT p.product_code AS productCode,
+           p.product_name AS productName
+    FROM product p
+    WHERE p.product_status = 1
+      AND NOT EXISTS (
+          SELECT 1
+          FROM bom b
+          WHERE b.product_code = p.product_code
+      )
+    ORDER BY p.product_code
+</select>
+
+<!-- 부품 추가용 -->
+<select id="bomFinishedProductListForAdd"
+        parameterType="int"
+        resultType="com.oracle.comventory.dto.product.ProductDto">
+
+    SELECT p.product_code AS productCode,
+           p.product_name AS productName
+    FROM product p
+    WHERE p.product_status = 1
+      AND p.product_code = #{value}
+
+</select>
+
+<select id="partList"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+    SELECT product_code AS productWon,
+           product_name AS productWonName
+    FROM product
+    WHERE product_status = 0
+    ORDER BY product_code
+</select>
+
+<delete id="deleteBom" parameterType="map">
+    DELETE FROM bom
+    WHERE product_code = #{productCode}
+      AND product_won = #{productWon}
+</delete>
+
+<select id="bomOne"
+        parameterType="map"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+    SELECT product_code AS productCode,
+           product_won  AS productWon,
+           need_qty     AS needQty,
+           reg_emp_no   AS regEmpNo,
+           reg_date     AS regDate
+    FROM bom
+    WHERE product_code = #{productCode}
+      AND product_won = #{productWon}
+</select>
+
+<update id="updateBom"
+        parameterType="com.oracle.comventory.dto.bom.BomDto">
+    UPDATE bom
+       SET need_qty = #{needQty}
+     WHERE product_code = #{productCode}
+       AND product_won = #{productWon}
+</update>
+
+<select id="bomPartList"
+        resultType="com.oracle.comventory.dto.bom.BomDto">
+    SELECT product_code AS productWon,
+           product_name AS productWonName
+    FROM product
+    WHERE product_status = 0
+    ORDER BY product_code
+</select>
+
+</mapper>

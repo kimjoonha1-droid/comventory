@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="production">
+<select id="productionTotal" resultType="int">
+
+    SELECT COUNT(*)
+    FROM production
+
+</select>
+<select id="productionList"
+        parameterType="com.oracle.comventory.dto.production.ProductionDto"
+        resultType="com.oracle.comventory.dto.production.ProductionDto">
+
+    SELECT *
+    FROM (
+        SELECT ROWNUM rn, a.*
+        FROM (
+            SELECT pr.production_code     AS productionCode,
+                   pr.product_code        AS productCode,
+                   p.product_name         AS productName,
+                   pr.production_qty      AS productionQty,
+                   pr.production_status   AS productionStatus,
+                   st.code_contents       AS productionStatusName,
+                   pr.complete_date       AS completeDate,
+                   pr.reg_emp_no          AS regEmpNo,
+                   pr.reg_date            AS regDate,
+                   pr.cancel_reason 	  AS cancelReason
+
+            FROM production pr
+
+            JOIN product p
+              ON pr.product_code = p.product_code
+
+            LEFT JOIN status_type st
+                   ON st.bcode = 510
+                  AND st.mcode = pr.production_status
+
+            ORDER BY pr.production_code DESC
+        ) a
+    )
+    WHERE rn BETWEEN #{start} AND #{end}
+</select>
+
+<select id="finishedProductionList"
+        resultType="com.oracle.comventory.dto.product.ProductDto">
+    SELECT DISTINCT p.product_code AS productCode,
+           p.product_name AS productName
+    FROM bom b
+    JOIN product p
+      ON b.product_code = p.product_code
+    ORDER BY p.product_code
+</select>
+
+<insert id="insertProduction">
+
+    INSERT INTO production (
+        production_code,
+        product_code,
+        production_qty,
+        production_status,
+        complete_date,
+        reg_emp_no,
+        reg_date
+    )
+    VALUES (
+        seq_production_code.NEXTVAL,
+        #{productCode},
+        #{productionQty},
+        1,
+        REPLACE(#{completeDate}, '-', ''),
+        #{regEmpNo},
+        SYSDATE
+    )
+
+</insert>
+
+<select id="productionDetail"
+        parameterType="int"
+        resultType="com.oracle.comventory.dto.production.ProductionDto">
+
+    SELECT pr.production_code    AS productionCode,
+           pr.product_code       AS productCode,
+           p.product_name        AS productName,
+           pr.production_qty     AS productionQty,
+           pr.production_status  AS productionStatus,
+           st.code_contents      AS productionStatusName,
+           pr.complete_date      AS completeDate,
+           pr.reg_emp_no         AS regEmpNo,
+           pr.reg_date           AS regDate,
+           pr.cancel_reason 	 AS cancelReason
+           
+    FROM production pr
+    JOIN product p
+      ON pr.product_code = p.product_code
+    LEFT JOIN status_type st
+      ON st.bcode = 510
+     AND st.mcode = pr.production_status
+    WHERE pr.production_code = #{value}
+
+</select>
+
+<update id="updateProduction"
+        parameterType="com.oracle.comventory.dto.production.ProductionDto">
+
+    UPDATE production
+       SET product_code 		= #{productCode},
+           production_qty 		= #{productionQty},
+           production_status 	= #{productionStatus},
+           complete_date 		= REPLACE(#{completeDate}, '-', ''),
+           cancel_reason 		= #{cancelReason, jdbcType=VARCHAR}
+     WHERE production_code 		= #{productionCode}
+
+</update>
+
+<delete id="deleteProduction"
+        parameterType="int">
+
+    DELETE FROM production
+    WHERE production_code = #{value}
+
+</delete>
+
+</mapper>

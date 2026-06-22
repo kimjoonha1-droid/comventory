@@ -1,0 +1,50 @@
+server:
+  port: 8585
+  
+# Oracle Connect
+spring:
+  application:
+    name: comventory
+    
+  # datasource Bean 생성
+  datasource:
+    driver-class-name: oracle.jdbc.driver.OracleDriver
+    url: jdbc:oracle:thin:@172.30.1.27:1521/xe
+  #  url: jdbc:oracle:thin:@localhost:1521/xe
+    username: comventory
+    password: tiger
+    
+  # view Resolver --> jsp
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+      
+  # gmail Transfer
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:a@b.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls.enable: true
+  
+  # Jpa Setting
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+      
+logging.level:
+  org.hibernate.SQL: debug   # logger를 통해 하이버네이트 실행 SQL
+  
+# Mybatis
+mybatis:
+  config-location: classpath:configuration.xml
+  mapper-locations: classpath:mappers/**/*.xml # mappers 아래 모든 하위폴더의 mapper 허용
+  
+#upload Folder
+com.oracle.oBootPersonal01.upload.path: upload
